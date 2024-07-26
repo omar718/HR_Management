@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "354484250709",
+    "project_id": "recrutement-managament",
+    "storage_bucket": "recrutement-managament.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:354484250709:android:cb795a1e1f69dd4841ccdc",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDogqZQZ31260r_HSuhZpUwNyHYvPhkn_E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
