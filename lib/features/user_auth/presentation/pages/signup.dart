@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_application_2/features/user_auth/firebase_auth/firebase_auth.dart';
-import 'package:flutter_application_2/features/user_auth/presentation/pages/login.dart';
 import 'package:flutter_application_2/features/user_auth/presentation/widgets/form_container_widget.dart';
 import 'package:flutter_application_2/global/common/toast.dart';
+import 'package:flutter_application_2/features/user_auth/presentation/pages/additional_info.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -13,28 +14,24 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  final FirebaseAuthService _auth = FirebaseAuthService();
-
-  TextEditingController _usernameController = TextEditingController();
+  bool _isSigningUp = false;
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
 
-  bool isSigningUp = false;
-
   @override
   void dispose() {
-    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-
+//frontend
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text("SignUp"),
+        title: Text("Sign Up"),
       ),
       body: Center(
         child: Padding(
@@ -46,37 +43,22 @@ class _SignUpPageState extends State<SignUpPage> {
                 "Sign Up",
                 style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
               ),
-              SizedBox(
-                height: 30,
-              ),
-              FormContainerWidget(
-                controller: _usernameController,
-                hintText: "Username",
-                isPasswordField: false,
-              ),
-              SizedBox(
-                height: 10,
-              ),
+              SizedBox(height: 30),
               FormContainerWidget(
                 controller: _emailController,
                 hintText: "Email",
                 isPasswordField: false,
               ),
-              SizedBox(
-                height: 10,
-              ),
+              SizedBox(height: 10),
               FormContainerWidget(
                 controller: _passwordController,
                 hintText: "Password",
                 isPasswordField: true,
               ),
-              SizedBox(
-                height: 30,
-              ),
+              SizedBox(height: 30),
               GestureDetector(
-                onTap:  (){
+                onTap: () {
                   _signUp();
-
                 },
                 child: Container(
                   width: double.infinity,
@@ -86,65 +68,63 @@ class _SignUpPageState extends State<SignUpPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
-                      child: isSigningUp ? CircularProgressIndicator(color: Colors.white,):Text(
-                    "Sign Up",
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  )),
+                    child: _isSigningUp
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            "Sign Up",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
                 ),
               ),
-              SizedBox(
-                height: 20,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Already have an account?"),
-                  SizedBox(
-                    width: 5,
-                  ),
-                  GestureDetector(
-                      onTap: () {
-                        Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => LoginPage()),
-                            (route) => false);
-                      },
-                      child: Text(
-                        "Login",
-                        style: TextStyle(
-                            color: Colors.blue, fontWeight: FontWeight.bold),
-                      ))
-                ],
-              )
             ],
           ),
         ),
       ),
     );
   }
-
+//backend
   void _signUp() async {
+    setState(() {
+      _isSigningUp = true;
+    });
 
-setState(() {
-  isSigningUp = true;
-});
-
-    String username = _usernameController.text;
     String email = _emailController.text;
     String password = _passwordController.text;
 
-    User? user = await _auth.signUpWithEmailAndPassword(email, password);
+    try {
+      UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword( 
+        email: email,
+        password: password,
+      );
+      User? user = userCredential.user;
 
-setState(() {
-  isSigningUp = false;
-});
     if (user != null) {
-      showToast(message: "User is successfully created");
-      Navigator.pushNamed(context, "/home");
-    } else {
-      showToast(message: "Some error happend");
+      // Create a new document for the user
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'email': email,
+        // Initialize with basic data, can be expanded later
+        'firstName': '',
+        'lastName': '',
+        'dateOfBirth': '',
+        'nationality': '',
+      });
+      // User successfully signed up
+      showToast(message: "Sign up successful");
+
+      // Navigate to AdditionalInfoPage
+      Navigator.pushReplacementNamed(context, '/additional');
+    }
+    } catch (e) {
+      // Handle sign-up errors
+      showToast(message: "Sign up failed: $e");
+    } finally {
+      setState(() {
+        _isSigningUp = false;
+      });
     }
   }
 }
