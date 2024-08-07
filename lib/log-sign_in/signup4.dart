@@ -361,9 +361,8 @@ class _Signup4ScreenState extends State<Signup4Screen> {
       }, SetOptions(merge: true));
 
       // Show success message and navigate to the login screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Form submitted successfully!")),
-      );
+      showToast(message: "Signup sccussfully completed"); // Custom toast
+
 
       // Navigate to the login screen and replace the current screen
       Navigator.pushReplacement(

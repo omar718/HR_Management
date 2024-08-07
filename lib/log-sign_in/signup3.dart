@@ -30,13 +30,8 @@ class _Signup3ScreenState extends State<Signup3Screen> {
 
       if (picked.isAfter(eighteenYearsAgo)) {
         // Show an error message if the user is not at least 18
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('You must be at least 18 years old'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
+        showToast(message: "You must be at least 18 years old"); // Custom toast
+
       }
 
       setState(() {
@@ -50,13 +45,8 @@ class _Signup3ScreenState extends State<Signup3Screen> {
   Future<void> _saveUserData() async {
     if (_selectedGender == null || _selectedDate == null) {
       // Show an error message if fields are empty
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select your gender and date of birth'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+      showToast(message: "Please select your gender and date of birth"); // Custom toast
+
     }
 
     User? user = FirebaseAuth.instance.currentUser;
