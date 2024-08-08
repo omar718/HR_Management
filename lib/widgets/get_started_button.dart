@@ -14,7 +14,7 @@ class GetStartedButton extends StatelessWidget {
         onPressed: () {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
+            MaterialPageRoute(builder: (context) => HomePage()),
           );
         },
         style: ElevatedButton.styleFrom(

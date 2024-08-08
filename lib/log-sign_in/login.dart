@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (context) => HomePage(),
           ),
         );
-        showToast(message: "Login successful");
+        showToast(message: "Successfully logged in");
       }
     } catch (e) {
       // Handle login errors
