@@ -33,12 +33,8 @@ class _SignupScreenState extends State<SignupScreen> {
   void _signUp() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       // Show an error message if passwords do not match
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Passwords do not match'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showToast(message: "Passwords don't match"); // Custom toast
+
       return;
     }
 
@@ -209,20 +205,26 @@ class _SignupScreenState extends State<SignupScreen> {
                 SizedBox(height: 20.0),
                 ElevatedButton(
                   onPressed: _isSigningUp ? null : _signUp, // Disable button if signing up
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Next',
-                        style: TextStyle(
-                          color: Colors.white, // Change the text color to white
-                          fontWeight: FontWeight.bold,
+                  
+                                    child: _isSigningUp
+                      ? CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Next',
+                              style: TextStyle(
+                                color: Colors.white, // Change the text color to white
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 8.0),
+                            Icon(Icons.arrow_forward, color: Colors.white),
+                          ],
                         ),
-                      ),
-                      SizedBox(width: 8.0),
-                      Icon(Icons.arrow_forward, color: Colors.white),
-                    ],
-                  ),
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.cyan, // Button background color
                     padding: EdgeInsets.symmetric(horizontal: 40.0, vertical: 15.0),

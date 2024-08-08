@@ -21,15 +21,10 @@ class _SignupScreen2State extends State<SignupScreen2> {
     String lastName = _lastNameController.text.trim();
     User? user = FirebaseAuth.instance.currentUser;
 
+    // Check if the fields are empty and return early if they are
     if (firstName.isEmpty || lastName.isEmpty) {
-      // Show an error message if fields are empty
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please enter your first and last name'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+      showToast(message: "Please enter your first and last name"); // Custom toast
+      return; // Return early if fields are empty
     }
 
     if (user != null) {
@@ -40,16 +35,15 @@ class _SignupScreen2State extends State<SignupScreen2> {
           'lastName': lastName,
         });
 
-        // Navigate to the next screen
+        // Navigate to the next screen only if data is successfully saved
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => Signup3Screen(),
           ),
         );
-
-        showToast(message: "Data saved successfully"); // Custom toast
       } catch (e) {
+        // Show an error message if there is an error saving data
         showToast(message: "Failed to save data: $e");
       }
     } else {

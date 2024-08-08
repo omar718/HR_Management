@@ -16,10 +16,10 @@ class Signup4Screen extends StatefulWidget {
 class _Signup4ScreenState extends State<Signup4Screen> {
   String? _selectedNationality;
   PlatformFile? _cvFile;
-  bool _isSubmitting = false; // Add this line
+  bool _isSubmitting = false;
 
   final List<Map<String, String>> _nationalities = [
-{'name': 'Afghanistan', 'flag': '🇦🇫'},
+    {'name': 'Afghanistan', 'flag': '🇦🇫'},
     {'name': 'Albania', 'flag': '🇦🇱'},
     {'name': 'Algeria', 'flag': '🇩🇿'},
     {'name': 'Andorra', 'flag': '🇦🇩'},

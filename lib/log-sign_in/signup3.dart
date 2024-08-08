@@ -43,10 +43,19 @@ class _Signup3ScreenState extends State<Signup3Screen> {
 
   // Method to save user data to Firestore
   Future<void> _saveUserData() async {
+    // Check if gender or date of birth is not selected
     if (_selectedGender == null || _selectedDate == null) {
-      // Show an error message if fields are empty
       showToast(message: "Please select your gender and date of birth"); // Custom toast
+      return; // Exit the function to prevent navigation
+    }
 
+    // Calculate the date 18 years ago from today
+    final DateTime eighteenYearsAgo = DateTime.now().subtract(Duration(days: 365 * 18));
+    
+    // Check if the user is under 18
+    if (_selectedDate!.isAfter(eighteenYearsAgo)) {
+      showToast(message: "You must be at least 18 years old"); // Custom toast
+      return; // Exit the function to prevent navigation
     }
 
     User? user = FirebaseAuth.instance.currentUser;
@@ -59,21 +68,20 @@ class _Signup3ScreenState extends State<Signup3Screen> {
           'dateOfBirth': _selectedDate?.toIso8601String(),
         });
 
-        // Navigate to the next screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Signup4Screen(),
-          ),
-        );
-
-        showToast(message: "Data saved successfully"); // Custom toast
-      } catch (e) {
-        showToast(message: "Failed to save data: $e");
-      }
-    } else {
-      showToast(message: "User not logged in");
+      // Navigate to the next screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Signup4Screen(),
+        ),
+      );
+    } catch (e) {
+      showToast(message: "Failed to save data: $e");
     }
+  } else {
+    showToast(message: "User not logged in");
+    return; // Exit the function to prevent navigation
+  }
   }
 
   @override
