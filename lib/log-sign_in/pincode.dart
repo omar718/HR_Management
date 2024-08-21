@@ -69,7 +69,7 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Image.asset(
-                        "assets/images/pincode.jpg", // Replace with your logo image path
+                        "assets/images/pincode.png", // Replace with your logo image path
                         width: 100,
                         height: 100,
                       ),

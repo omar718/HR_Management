@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_2/global/common/toast.dart'; // Import your custom toast function
+import 'package:flutter_application_2/features/user_auth/firebase_auth/firebase_auth.dart'; // Import your custom auth function
 import 'signup2.dart'; // Import the second signup screen
 import 'login.dart'; // Import the login screen
 import 'package:flutter_application_2/HomePage/home.dart'; // Home page import
@@ -12,8 +13,8 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-
+  final FirebaseAuthService _auth = FirebaseAuthService();
+// managing the state of the input fields
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -22,19 +23,36 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isSigningUp = false;
 
   @override
-  void dispose() {
+  void dispose() { // dispose helps release resources and clean up listeners.
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }  
+    bool _isValidEmail(String email) {
+    final regular_expression = RegExp(r'^[^@]+@[^@]+\.[^@]+$'); // RegExp is a method used in dart to evaluate regular expressions
+    return regular_expression.hasMatch(email);
   }
 
   // Method to sign up the user
   void _signUp() async {
+      String email = _emailController.text.trim(); // trim method is used to remove unintended spaces
+      String password = _passwordController.text.trim();
+      String confirmPassword = _confirmPasswordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      showToast(message: "Please fill out all fields.");
+      return;
+    }
+    
+    if (!_isValidEmail(email)) {
+      showToast(message: "Invalid email address.");
+      return;
+    }
+
     if (_passwordController.text != _confirmPasswordController.text) {
       // Show an error message if passwords do not match
       showToast(message: "Passwords don't match"); // Custom toast
-
       return;
     }
 
@@ -42,18 +60,9 @@ class _SignupScreenState extends State<SignupScreen> {
       _isSigningUp = true;
     });
 
-    String email = _emailController.text.trim();
-    String password = _passwordController.text.trim();
-
     try {
       // Create a new user with Firebase Auth
-      UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      User? user = userCredential.user;
-
+      User? user = await _auth.signUpWithEmailAndPassword(email, password);
       if (user != null) {
         // Store initial data in Firestore
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
@@ -65,10 +74,10 @@ class _SignupScreenState extends State<SignupScreen> {
           'role':'guest',
           'picture':'',
           'resume':'',
-          'applied jobs':'',
-          'interview_planned':'',
+          'appliedJobs':'',
+          'interviewPlanned':'',
           'tasks':'',
-          'accepted_jobs':'',
+          'acceptedJobs':'',
         });
 
         // Navigate to SignupScreen2 for additional info
@@ -202,15 +211,55 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: 20.0),
-                ElevatedButton(
-                  onPressed: _isSigningUp ? null : _signUp, // Disable button if signing up
-                  
-                                    child: _isSigningUp
-                      ? CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                      : Row(
+              SizedBox(height: 20.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {Navigator.of(context).push(
+                          MaterialPageRoute( 
+                            builder: (context) => HomePage(),
+                          ),
+                        );
+                      },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.home, color: Colors.white),
+                            SizedBox(width: 8.0),
+                            Text(
+                              'Home',
+                              style: TextStyle(
+                                color: Colors.white, // Text color
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green, // Button background color
+                          foregroundColor: Colors.black, // Button text color
+                          padding: EdgeInsets.symmetric(vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0), // Rounded corners
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16.0), // Space between buttons
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSigningUp ? null : _signUp, // Disable button if signing up
+                        child: _isSigningUp
+                          ? CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            )
+                        : Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
@@ -224,19 +273,21 @@ class _SignupScreenState extends State<SignupScreen> {
                             Icon(Icons.arrow_forward, color: Colors.white),
                           ],
                         ),
-
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyan, // Button background color
-                    padding: EdgeInsets.symmetric(horizontal: 40.0, vertical: 15.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan, // Button background color
+                          padding: EdgeInsets.symmetric(vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                    textStyle: TextStyle(
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                  ],
+                ),                
                 SizedBox(height: 40.0),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -250,7 +301,6 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context);
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => LoginScreen(),

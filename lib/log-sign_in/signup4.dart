@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_application_2/HomePage/home.dart';
 import 'package:path/path.dart' as path;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_2/log-sign_in/login.dart';
-import 'package:flutter_application_2/global/common/toast.dart';
+import 'package:flutter_application_2/global/common/toast.dart'; // Assuming you have a custom toast function
 
 class Signup4Screen extends StatefulWidget {
   @override
@@ -16,8 +17,9 @@ class Signup4Screen extends StatefulWidget {
 class _Signup4ScreenState extends State<Signup4Screen> {
   String? _selectedNationality;
   PlatformFile? _cvFile;
-  bool _isSubmitting = false;
+  bool _isSubmit = false;
 
+  final TextEditingController _cvController = TextEditingController();
   final List<Map<String, String>> _nationalities = [
     {'name': 'Afghanistan', 'flag': '🇦🇫'},
     {'name': 'Albania', 'flag': '🇦🇱'},
@@ -217,160 +219,295 @@ class _Signup4ScreenState extends State<Signup4Screen> {
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign Up Step 4'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Center(
-                child: Image(
-                  image: AssetImage('assets/images/signup.png'),
-                  height: 150,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Please select your nationality and upload your CV:',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Nationality',
-                ),
-                value: _selectedNationality,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedNationality = newValue;
-                  });
-                },
-                items: _nationalities.map((nationality) {
-                  return DropdownMenuItem<String>(
-                    value: nationality['name'],
-                    child: Row(
-                      children: [
-                        Text(
-                          nationality['flag']!,
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          nationality['name']!,
-                          style: TextStyle(
-                            color: _selectedNationality == nationality['name']
-                                ? Colors.black
-                                : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () => _pickFile(),
-                icon: const Icon(Icons.upload_file),
-                label: Text(_cvFile != null ? 'CV Selected' : 'Upload CV'),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isSubmitting
-                    ? null
-                    : () async {
-                        if (_selectedNationality != null && _cvFile != null) {
-                          setState(() {
-                            _isSubmitting = true; // Set to true when submitting
-                          });
-                          await _uploadFile();
-                          setState(() {
-                            _isSubmitting = false; // Set to false when done
-                          });
-                        } else {
-                          showToast(message: "Please fill out all fields.");
-                        }
-                      },
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(),
-                      )
-                    : const Text('Submit'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _cvController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickFile() async {
     try {
-      // Pick a file using the FilePicker package
-      final result = await FilePicker.platform.pickFiles();
-
+      FilePickerResult? result = await FilePicker.platform.pickFiles();
+      // null checks if the user selected any files or if the selection was canceled.
+      // result.files.isNotEmpty ensures that there is at least one file in the list of selected files. both of them are necesseraly
       if (result != null && result.files.isNotEmpty) {
-        // Get the selected file
         setState(() {
           _cvFile = result.files.first;
+          _cvController.text = _cvFile!.name;
         });
-      } else {
-        // Handle case when no file is selected
-        showToast(message: "No file selected.");
       }
     } catch (e) {
-      // Handle any errors
-      showToast(message: "Error picking file: $e");
+      showToast(message: 'Error picking file: $e');
     }
   }
 
-  Future<void> _uploadFile() async {
-    if (_cvFile == null) return;
+  Future<void> _submit() async {
+
+    if (_cvFile == null || _selectedNationality==null){
+      showToast(message: "Please select your nationality and upload your resume.");
+      return;
+    }
+                          
+    setState(() {
+      _isSubmit = true; // Start Submit loading
+    });
 
     try {
-      // Create a reference to the Firebase Storage location
+      // this is the reference of the location where the file will be stored
       final storageRef = FirebaseStorage.instance.ref().child('${FirebaseAuth.instance.currentUser?.uid}/${path.basename(_cvFile!.path!)}');
-
-      // Upload the file to Firebase Storage
+      
       final uploadTask = storageRef.putFile(File(_cvFile!.path!));
-
-      // Monitor upload progress
-      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        print('Upload progress: $progress%');
-      });
-
-      // Wait for the upload to complete
       final snapshot = await uploadTask;
-
-      // Get the download URL of the uploaded file
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      // Save the nationality and CV URL to Firestore
-      await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser?.uid).set({
+      // Extract the file identifier from the download URL
+      final uri = Uri.parse(downloadUrl);
+      final filePath = uri.path; // This is the path part of the URL
+      final decodedPath = Uri.decodeComponent(filePath); // Decode URL encoding
+      final pathSegments = decodedPath.split('/'); // Split path by '/'
+      
+      // Extract the identifier from the path segments
+      final fileIdentifier = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : '';
+
+      await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser?.uid).update({
         'nationality': _selectedNationality,
-        'cvUrl': downloadUrl,
-      }, SetOptions(merge: true));
+        'resume': fileIdentifier,
+      });
 
-      // Show success message and navigate to the login screen
-      showToast(message: "Signup sccussfully completed"); // Custom toast
+      showToast(message: "Signup successfully completed");
 
-
-      // Navigate to the login screen and replace the current screen
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
+        MaterialPageRoute(builder: (context) => HomePage()),
       );
     } catch (e) {
       showToast(message: "Error uploading file or saving data: $e");
+    } finally {
+      setState(() {
+        _isSubmit = false; // Stop loading
+      });
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child:SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/signup.png',
+                  width: 100,
+                  height: 100,
+                ),
+                const SizedBox(height: 20.0),
+                const Text(
+                  'Enter Your Details',
+                  style: TextStyle(
+                    fontSize: 28.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.cyan,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20.0),
+                DropdownButtonFormField<String>(
+                  value: _selectedNationality,
+                  decoration: InputDecoration(
+                    labelText: 'Select Nationality',
+                    labelStyle: const TextStyle(color: Colors.black),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.cyan),
+                    ),
+                    prefixIcon: const Icon(Icons.public, color: Colors.cyan),
+                  ),
+                  items: _nationalities
+                      .map((nationality) => DropdownMenuItem<String>(
+                            value: nationality['name'],
+                            child: Row(
+                              children: [
+                                Text(
+                                  nationality['flag']!,
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  nationality['name']!,
+                                  style: TextStyle(
+                                    color: _selectedNationality ==
+                                            nationality['name']
+                                        ? Colors.black
+                                        : Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedNationality = value;
+                    });
+                  },
+                  isExpanded: true,
+                  selectedItemBuilder: (BuildContext context) {
+                    return _nationalities.map<Widget>((nationality) {
+                      return Row(
+                        children: [
+                          Text(
+                            nationality['flag']!,
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            nationality['name']!,
+                            style: const TextStyle(color: Colors.black),
+                          ),
+                        ],
+                      );
+                    }).toList();
+                  },
+                ),
+                const SizedBox(height: 20.0),
+                GestureDetector(
+                  onTap: _pickFile, // Opens file picker when text field is tapped
+                  child: AbsorbPointer(
+                    child: TextField(
+                      controller: _cvController,
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: 'Upload CV',
+                        labelStyle: const TextStyle(color: Colors.black),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.cyan),
+                        ),
+                        prefixIcon: const Icon(Icons.attach_file, color: Colors.cyan),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.file_upload, color: Colors.cyan),
+                          onPressed: _pickFile, // Also triggers file picker
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Go back
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.arrow_back, color: Colors.black),
+                            SizedBox(width: 8.0),
+                            Text(
+                              'Back',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[300],
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 20.0),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSubmit ? null : _submit, // Show loading indicator if in progress
+                        child: _isSubmit
+                          ? CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            )
+                        : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Text(
+                              'Submit',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            SizedBox(width: 8.0),
+                            Icon(Icons.send, color: Colors.white),
+                          ],
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan,
+                          padding: const EdgeInsets.symmetric(vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Want to try again? ",
+                      style: TextStyle(
+                        color: Colors.black,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Sign in",
+                        style: TextStyle(
+                          color: Colors.cyan,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

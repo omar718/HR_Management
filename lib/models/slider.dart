@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_application_2/constants/constants.dart';
 
 class AppSlider {

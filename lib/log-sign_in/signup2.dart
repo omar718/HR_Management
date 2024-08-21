@@ -23,7 +23,7 @@ class _SignupScreen2State extends State<SignupScreen2> {
 
     // Check if the fields are empty and return early if they are
     if (firstName.isEmpty || lastName.isEmpty) {
-      showToast(message: "Please enter your first and last name"); // Custom toast
+      showToast(message: "Please enter your first and last name."); // Custom toast
       return; // Return early if fields are empty
     }
 
@@ -46,9 +46,10 @@ class _SignupScreen2State extends State<SignupScreen2> {
         // Show an error message if there is an error saving data
         showToast(message: "Failed to save data: $e");
       }
-    } else {
-      showToast(message: "User not logged in");
-    }
+    }else {
+    showToast(message: "User not logged in");
+    return; // Exit the function to prevent navigation
+  }
   }
 
   @override

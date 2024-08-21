@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // Internationalization package used for date and time formatting 
 import 'package:flutter_application_2/global/common/toast.dart';
-import 'package:flutter_application_2/log-sign_in/login.dart';
+import 'login.dart';
 import 'signup4.dart';
 
 class Signup3Screen extends StatefulWidget {
@@ -31,12 +32,14 @@ class _Signup3ScreenState extends State<Signup3Screen> {
       if (picked.isAfter(eighteenYearsAgo)) {
         // Show an error message if the user is not at least 18
         showToast(message: "You must be at least 18 years old"); // Custom toast
-
+        return;
       }
 
       setState(() {
         _selectedDate = picked;
-        _dateController.text = "${picked.toLocal()}".split(' ')[0]; // Format date
+        // Format the date to DD-MM-YYYY
+        final formattedDate = DateFormat('dd-MM-yyyy').format(picked);
+        _dateController.text = formattedDate;
       });
     }
   }
@@ -63,9 +66,10 @@ class _Signup3ScreenState extends State<Signup3Screen> {
     if (user != null) {
       try {
         // Update user data in Firestore
+        final formattedDate = DateFormat('dd-MM-yyyy').format(_selectedDate!);
         await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
           'gender': _selectedGender,
-          'dateOfBirth': _selectedDate?.toIso8601String(),
+          'dateOfBirth': formattedDate,
         });
 
       // Navigate to the next screen
@@ -178,55 +182,67 @@ class _Signup3ScreenState extends State<Signup3Screen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context); // Go back
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.arrow_back),
-                          SizedBox(width: 8.0),
-                          Text('Back'),
-                        ],
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[300], // Button background color
-                        foregroundColor: Colors.black, // Button text color
-                        padding: EdgeInsets.symmetric(horizontal: 40.0, vertical: 15.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0), // Rounded corners
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Go back to the previous screen
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_back, color: Colors.black),
+                            SizedBox(width: 8.0),
+                            Text(
+                              'Back',
+                              style: TextStyle(
+                                color: Colors.black, // Text color
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        textStyle: TextStyle(
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.bold,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[300], // Button background color
+                          foregroundColor: Colors.black, // Button text color
+                          padding: EdgeInsets.symmetric(vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0), // Rounded corners
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: _saveUserData, // Save data and proceed to the next step
-                      child: Row(
-                        children: [
-                          Text(
-                            'Next',
-                            style: TextStyle(
-                              color: Colors.white, // Change the text color to white
-                              fontWeight: FontWeight.bold,
+                    SizedBox(width: 16.0), // Space between buttons
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _saveUserData, // Save data and proceed to the next step
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Next',
+                              style: TextStyle(
+                                color: Colors.white, // Change the text color to white
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          SizedBox(width: 8.0),
-                          Icon(Icons.arrow_forward, color: Colors.white),
-                        ],
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.cyan, // Button background color
-                        padding: EdgeInsets.symmetric(horizontal: 40.0, vertical: 15.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
+                            SizedBox(width: 8.0),
+                            Icon(Icons.arrow_forward, color: Colors.white),
+                          ],
                         ),
-                        textStyle: TextStyle(
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.bold,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan, // Button background color
+                          padding: EdgeInsets.symmetric(vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),

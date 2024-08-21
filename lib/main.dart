@@ -1,8 +1,6 @@
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart'; //Initializes Firebase in the app.
 import 'package:flutter/material.dart'; // Provides material design widgets and themes.
-import 'package:flutter/foundation.dart';// Offers foundational Flutter library support, including constants like kIsWeb.
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Authentication, allowing you to log users in and out.
 import 'package:flutter/services.dart';
 import 'package:flutter_application_2/screens/landing_page.dart';
 
@@ -29,7 +27,7 @@ class MyApp extends StatelessWidget{
       title: '',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        platform: TargetPlatform.iOS, 
+        platform: TargetPlatform.android, 
       ),
       home: LandingPage(),
     );

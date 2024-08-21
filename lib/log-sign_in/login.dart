@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_2/HomePage/home.dart';
+import 'package:flutter_application_2/features/user_auth/firebase_auth/firebase_auth.dart';
 import 'package:flutter_application_2/log-sign_in/ForgotPasswordScreen.dart';
 import 'package:flutter_application_2/global/common/toast.dart';
 import 'signup.dart'; // Import the signup screen
@@ -14,7 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuthService _auth = FirebaseAuthService();
   bool _obscureText = true; // For hiding/showing password
   bool _isLoading = false; // For showing a loading indicator during login
 
@@ -31,29 +32,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    try {
-      // Perform login with Firebase Authentication
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+    // Perform login and display the error messages with the custom auth.dart file
+    User? user = await _auth.signInWithEmailAndPassword(email, password);
+    setState(() {
+      _isLoading = false;
+    });
 
-      if (userCredential.user != null) {
-        // Navigate to HomePage if login is successful
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => HomePage(),
-          ),
-        );
-        showToast(message: "Successfully logged in");
-      }
-    } catch (e) {
-      // Handle login errors
-      showToast(message: "Error: ${e.toString()}");
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+    if (user != null) {
+      // Navigate to HomePage if login is successful
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => HomePage(),
+        ),
+      );
+      showToast(message: "Successfully logged in");
     }
   }
 
@@ -69,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 SizedBox(height: 50.0), // Adjust the height to center the content
                 Image.asset(
-                  'assets/images/logo.jpg', // Ensure the path to the image is correct
+                  'assets/images/login.png', // Ensure the path to the image is correct
                   width: 100,
                   height: 100,
                 ),
@@ -135,13 +127,55 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 SizedBox(height: 20.0),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _login, // Disable button when loading
-                  child: _isLoading
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => HomePage(), // Navigate to ForgotPasswordScreen
+                            ),
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.home, color: Colors.white),
+                            SizedBox(width: 8.0),
+                            Text(
+                              'Home',
+                              style: TextStyle(
+                                color: Colors.white, // Text color
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green, // Button background color
+                          foregroundColor: Colors.black, // Button text color
+                          padding: EdgeInsets.symmetric(vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0), // Rounded corners
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16.0), // Space between buttons
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _login, // Disable button when loading
+                        child: _isLoading
                       ? CircularProgressIndicator(
                           color: Colors.white,
                         )
-                      : Row(
+                        : Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
@@ -155,18 +189,22 @@ class _LoginScreenState extends State<LoginScreen> {
                             Icon(Icons.login, color: Colors.white),
                           ],
                         ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyan,
-                    padding: EdgeInsets.symmetric(horizontal: 80.0, vertical: 15.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan,
+                          padding: EdgeInsets.symmetric(horizontal: 30.0, vertical: 15.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                    textStyle: TextStyle(
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  ],
                 ),
+
                 SizedBox(height: 10.0),
                 TextButton(
                   onPressed: () {

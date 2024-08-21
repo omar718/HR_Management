@@ -1,7 +1,5 @@
 //import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_application_2/constants/constants.dart';
 import 'package:flutter_application_2/models/slider.dart';
 import 'package:flutter_application_2/widgets/get_started_button.dart';
 import 'package:flutter_application_2/widgets/slide_dots.dart';
