@@ -93,15 +93,22 @@ class _ManageOffersPageState extends State<ManageOffersPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
-                onSelected: (String choice) {
+                onSelected: (String choice) async{
                   if (choice == 'Home') {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => HomePage()),
                     );
                   } else if (choice == 'Logout') {
-                    // Handle logout logic here
-                    print('Déconnexion');
+                    // Sign out the user
+                    await FirebaseAuth.instance.signOut();
+                    showToast(message: "Successfully logged out");
+                    // Navigate to the homepage
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomePage()),
+                      (route) => false,
+                    );
                   }
                 },
                 itemBuilder: (BuildContext context) {

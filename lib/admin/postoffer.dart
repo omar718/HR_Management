@@ -70,6 +70,8 @@ class _PostOfferPageState extends State<PostOfferPage> {
           'salary': salary,
           'createdBy': createdBy,
           'adminID': userID,
+          'applicants':"",
+          'acceptedApplicants':"",
           'status':'open'
         });
 

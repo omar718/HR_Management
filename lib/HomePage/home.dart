@@ -21,7 +21,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _jobOffersStream = _firestore.collection('jobs').where('status', isEqualTo: 'open').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>?? {};
+        final id = doc.id;
+        return {
+          'data': data,
+          'id': id,
+        };
+      }).toList();
     });
   }
   // Method to update job offers based on search query
@@ -33,7 +40,14 @@ class _HomePageState extends State<HomePage> {
         .where('title', isLessThanOrEqualTo: query + '\uf8ff') // adding uf8ff displays the offers whatever the end of the string
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+          return snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>?? {};
+            final id = doc.id;
+            return {
+              'data': data,
+              'id': id,
+            };
+          }).toList();
         });
     });
   }
@@ -170,7 +184,7 @@ void _showSubmissionDialog(BuildContext context) { //pop up to complete submissi
     },
   );
 }
-Future<void> _applyNow(String jobId) async {
+Future<void> _applyNow( String jobID) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       // Handle case when user is not logged in
@@ -184,6 +198,10 @@ Future<void> _applyNow(String jobId) async {
       final userResume = userDoc.data()?['resume'];
       final userAppliedJobs = userDoc.data()?['appliedJobs'];
       String userRole = userDoc.data()?['role']; // not final because its value may change
+      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobID).get();
+      String jobApplicants = jobDoc.data()?['applicants'];
+      String jobTitle = jobDoc.data()?['title'];
+      final adminID = jobDoc.data()?['adminID'];
 
       // Check if the important info exists
       if (userFirstName.isEmpty || userLastName.isEmpty || userResume.isEmpty) {
@@ -194,7 +212,7 @@ Future<void> _applyNow(String jobId) async {
       if (userRole == 'guest' || userRole == 'applicant' || userRole == 'employee') {
         final applicationDoc = await FirebaseFirestore.instance //extracting the the collection document to check if it exists or not
           .collection('applications')
-          .doc('${user.uid}_$jobId')
+          .doc('${user.uid}_$jobTitle')
           .get();
 
         if (applicationDoc.exists) {             //checks if it exists
@@ -202,31 +220,38 @@ Future<void> _applyNow(String jobId) async {
               return;
             }
 
-        // updates the appliedJobs and role fields of the users collection
+        String userName = '$userFirstName $userLastName'; // constructing the full name of the user
+        // creates the fields of the document if it does not exist
+        try {
+          final applicationData = {
+            'userID':user.uid,
+            'adminID':adminID,
+            'userName': userName,
+            'jobTitle': jobTitle,
+            'applicationDate': DateTime.now(),
+            'status': 'pending',
+            'interviews': '',
+          };
+        
+          await _firestore.collection('applications').doc('${user.uid}_$jobTitle').set(applicationData);
+          showToast(message: "Application submitted successfully.");
+        } catch (e){
+          showToast(message: "Error submitting application: $e");
+        }
+        // updates the appliedJobs and role fields of the users collection + applicants field for the job collection
         if(userAppliedJobs.isNotEmpty){ // checks if there are any previous job applications to not erase them
-          jobId = "$userAppliedJobs, $jobId" ;
+          jobTitle = "$userAppliedJobs, $jobTitle" ;
+        }
+        if(jobApplicants.isNotEmpty){
+          userName ="$jobApplicants , $userName";
         }
         if (userRole == 'guest'){ // changes the guest role into applicant
           userRole = 'applicant';
         }
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({'appliedJobs': jobId,'role': userRole});
 
-        // creates the fields of the document if it does not exist
-        final userID = '$userFirstName $userLastName';
-        
-        final applicationData = {
-          'userId': userID,
-          'jobId': jobId,
-          'applicationDate': DateTime.now(),
-          'status': 'pending',
-          'interviews': '',
-        };
-        
-        await _firestore.collection('applications').doc('${user.uid}_$jobId').set(applicationData).then((_) {
-          showToast(message: "Application submitted successfully.");
-        }).catchError((error) {
-          showToast(message: "Error submitting application: $error");
-        });
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({'appliedJobs': jobTitle,'role': userRole});
+        await FirebaseFirestore.instance.collection('jobs').doc(jobID).update({'applicants': userName});
+
       } else if (userRole=='admin'){
         showToast(message: "Admins can't apply to job offers.");
         return;
@@ -234,7 +259,7 @@ Future<void> _applyNow(String jobId) async {
         showToast(message: "You are not eligible to apply.");
       }
     } catch (e){
-        showToast(message: "an error occured: $e");
+      showToast(message: "an error occured: $e");
     }
   }
   @override
@@ -290,7 +315,10 @@ Future<void> _applyNow(String jobId) async {
           return ListView.builder(
             itemCount: jobOffers.length,
             itemBuilder: (context, index) {
-              final job = jobOffers[index];
+              final jobOffer = jobOffers[index];
+              final jobData = jobOffer['data'] as Map<String, dynamic>;
+              final jobId = jobOffer['id'] as String;
+
               return Card(
                 margin: EdgeInsets.all(8.0),
                 elevation: 4.0,
@@ -301,7 +329,7 @@ Future<void> _applyNow(String jobId) async {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        job['title'] ?? 'No Title',
+                        jobData['title'] ?? 'No Title',
                         style: TextStyle(
                           fontSize: 18.0,
                           fontWeight: FontWeight.bold,
@@ -309,27 +337,27 @@ Future<void> _applyNow(String jobId) async {
                       ),
                       SizedBox(height: 8.0),
                       Text(
-                        job['description'] ?? 'No Description',
+                        jobData['description'] ?? 'No Description',
                       ),
                       SizedBox(height: 8.0),
-                      if (job['requirements'] != null && job['requirements'] is String && job['requirements']!.isNotEmpty) 
+                      if (jobData['requirements'] != null && jobData['requirements'] is String && jobData['requirements']!.isNotEmpty) 
                         Text(
-                          'Requirements:\n - ${(job['requirements'] as String).split(',').map((e) => e.trim()).join('\n - ')}', // Display requirements
+                          'Requirements:\n - ${(jobData['requirements'] as String).split(',').map((e) => e.trim()).join('\n - ')}', // Display requirements
                           style: TextStyle(color: Colors.grey[700]),
                         ),
                       SizedBox(height: 8.0),
                       Text(
-                        'Location: ${job['location'] ?? 'Unknown'}',
+                        'Location: ${jobData['location'] ?? 'Unknown'}',
                         style: TextStyle(color: Colors.grey),
                       ),
                       SizedBox(height: 8.0),
                       Text(
-                        'Salary: ${job['salary'] != null ? '${job['salary']} TND' : 'Unknown'}',
+                        'Salary: ${jobData['salary'] != null ? '${jobData['salary']} TND' : 'Unknown'}',
                         style: TextStyle(color: Colors.green),
                       ),
                       SizedBox(height: 16.0),
                       ElevatedButton(
-                        onPressed: () {_applyNow(job['title']);}, //apply job backend
+                        onPressed: () {_applyNow(jobId);}, //apply job backend
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           minimumSize: Size(double.infinity, 40.0),
